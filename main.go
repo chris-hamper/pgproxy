@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
 	"net"
 	"os"
-	"os/exec"
+
+	"github.com/jackc/pgx/v4"
 
 	"github.com/chris-hamper/pgproxy/pkg/proxy"
 )
@@ -25,6 +27,21 @@ func main() {
 	flag.StringVar(&options.listenAddress, "listen", "127.0.0.1:15432", "Listen address")
 	flag.Parse()
 
+	// clientConn, err := net.Dial("tcp", "localhost:5432")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// log.Println("Client connection opened")
+
+	// f := proxy.NewFrontend(clientConn)
+	// err = f.Run()
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+
+	c, err := pgx.Connect(context.TODO(), "postgres://postgres:password@localhost:5432")
+	c.PgConn().Conn()
+
 	ln, err := net.Listen("tcp", options.listenAddress)
 	if err != nil {
 		log.Fatal(err)
@@ -38,9 +55,7 @@ func main() {
 		}
 		log.Println("Accepted connection from", conn.RemoteAddr())
 
-		b := proxy.NewBackend(conn, func() ([]byte, error) {
-			return exec.Command("sh", "-c", "echo 'Hello, World!'").CombinedOutput()
-		})
+		b := proxy.NewBackend(conn)
 		go func() {
 			err := b.Run()
 			if err != nil {

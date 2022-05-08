@@ -10,19 +10,15 @@ import (
 type Backend struct {
 	backend   *pgproto3.Backend
 	conn      net.Conn
-	responder func() ([]byte, error)
 }
 
-func NewBackend(conn net.Conn, responder func() ([]byte, error)) *Backend {
+func NewBackend(conn net.Conn) *Backend {
 	backend := pgproto3.NewBackend(pgproto3.NewChunkReader(conn), conn)
 
-	connHandler := &Backend{
+	return &Backend{
 		backend:   backend,
 		conn:      conn,
-		responder: responder,
 	}
-
-	return connHandler
 }
 
 func (b *Backend) Run() error {
@@ -41,10 +37,7 @@ func (b *Backend) Run() error {
 
 		switch msg.(type) {
 		case *pgproto3.Query:
-			response, err := b.responder()
-			if err != nil {
-				return fmt.Errorf("error generating query response: %w", err)
-			}
+			response := []byte("Hello, World!")
 
 			buf := (&pgproto3.RowDescription{Fields: []pgproto3.FieldDescription{
 				{
@@ -77,6 +70,8 @@ func (b *Backend) handleStartup() error {
 	if err != nil {
 		return fmt.Errorf("error receiving startup message: %w", err)
 	}
+
+	fmt.Printf("StartupMessage: %#v\n", startupMessage)
 
 	switch startupMessage.(type) {
 	case *pgproto3.StartupMessage:
